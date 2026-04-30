@@ -52,8 +52,9 @@ class BalabonyApp extends StatelessWidget {
           ThemeData.dark().textTheme,
         ),
       ),
-      home: const BalabonyScreen(),
+      home: const GamesHubScreen(),
       routes: {
+        '/balabony': (_) => const BalabonyScreen(),
         '/games': (_) => const GamesHubScreen(),
         '/sudoku': (_) => const SudokuScreen(),
         '/memory': (_) => const MemoryScreen(),
