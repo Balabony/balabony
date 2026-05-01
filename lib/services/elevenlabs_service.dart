@@ -2,18 +2,21 @@ import 'dart:async';
 import 'dart:html' as html;
 import 'dart:js' as js;
 import 'package:dio/dio.dart';
+import 'device_id.dart';
 
 class ElevenLabsService {
   final _dio = Dio();
 
   Future<void> speak(String text, {Function? onComplete}) async {
     try {
+      final deviceId = await DeviceId.get();
       final response = await _dio.post(
         '${html.window.location.origin}/api/tts',
         options: Options(
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'audio/mpeg',
+            'x-device-id': deviceId,
           },
           responseType: ResponseType.bytes,
         ),

@@ -1,6 +1,7 @@
 import 'dart:html' as html;
 import 'package:dio/dio.dart';
 import '../models/ball_state.dart';
+import 'device_id.dart';
 
 const String _systemPrompt = '''
 Ти — Балабон, теплий і терплячий голосовий помічник для людей старшого віку.
@@ -63,6 +64,7 @@ class GptService {
         m.role == 'system' || m.timestamp.isAfter(cutoff)).toList();
 
     try {
+      final deviceId = await DeviceId.get();
       final response = await _dio.post(
         '${html.window.location.origin}/api/chat',
         data: {
@@ -72,7 +74,10 @@ class GptService {
           'messages': recentMessages.map((m) => m.toMap()).toList(),
         },
         options: Options(
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'x-device-id': deviceId,
+          },
         ),
       );
 
