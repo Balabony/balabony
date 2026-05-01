@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/balabony_screen.dart';
+import 'screens/stories_screen.dart';
 import 'games/shared/games_hub_screen.dart';
 import 'games/sudoku/sudoku_screen.dart';
 import 'games/memory/memory_screen.dart';
@@ -53,6 +54,7 @@ class BalabonyApp extends StatelessWidget {
       home: const GamesHubScreen(),
       routes: {
         '/balabony': (_) => const BalabonyScreen(),
+        '/stories': (_) => const StoriesScreen(),
         '/games': (_) => const GamesHubScreen(),
         '/sudoku': (_) => const SudokuScreen(),
         '/memory': (_) => const MemoryScreen(),

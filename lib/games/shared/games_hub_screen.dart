@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
+import '../../screens/stories_screen.dart';
 
 class GamesHubScreen extends StatelessWidget {
   const GamesHubScreen({super.key});
@@ -24,6 +25,10 @@ class GamesHubScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
+            _StoriesFeaturedCard(
+              onTap: () => Navigator.pushNamed(context, '/stories'),
+            ),
+            const SizedBox(height: 28),
             _GameCard(
               title: 'Словесний конструктор',
               description: 'Складай слова з літер великого слова',
@@ -115,6 +120,118 @@ class GamesHubScreen extends StatelessWidget {
               onTap: () => Navigator.pushNamed(context, '/sequence'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StoriesFeaturedCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _StoriesFeaturedCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0f1e3a), Color(0xFF040D20)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFEF9F27), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFEF9F27).withOpacity(0.12),
+                border: Border.all(
+                  color: const Color(0xFFEF9F27).withOpacity(0.4),
+                  width: 1,
+                ),
+              ),
+              child: const Center(
+                child: Text('📖', style: TextStyle(fontSize: 26)),
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Аудіоісторії',
+                    style: TextStyle(
+                      color: Color(0xFFEF9F27),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Слухайте казки та оповідання',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.65),
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _badge('3 безкоштовно', false),
+                      const SizedBox(width: 8),
+                      _badge('✦ 5 преміум', true),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Color(0xFFEF9F27),
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _badge(String label, bool gold) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: gold
+            ? const Color(0xFFEF9F27).withOpacity(0.15)
+            : Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: gold
+              ? const Color(0xFFEF9F27).withOpacity(0.4)
+              : Colors.white.withOpacity(0.1),
+          width: 0.5,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: gold
+              ? const Color(0xFFEF9F27)
+              : Colors.white.withOpacity(0.5),
+          fontSize: 11,
         ),
       ),
     );
