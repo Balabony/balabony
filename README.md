@@ -1,102 +1,135 @@
-# Balabony AI — Flutter MVP
+# Balabony
 
-Голосовий компаньйон для людей старшого віку.
+AI voice companion for Ukrainian seniors. Flutter web app with Node.js serverless backend on Vercel.
 
-## Швидкий старт
+**Live:** [app.balabony.com](https://app.balabony.com)
 
-### 1. Встановити Flutter
-```bash
-# https://flutter.dev/docs/get-started/install
-flutter --version  # потрібно 3.x+
-```
+## Stack
 
-### 2. Клонувати та встановити залежності
-```bash
-cd balabony_ai
-flutter pub get
-```
+| Layer | Technology |
+|---|---|
+| Frontend | Flutter (web-only) |
+| State | Riverpod |
+| Backend | Vercel serverless functions (`api/`) |
+| Database | Supabase (PostgreSQL) |
+| Payments | LiqPay (hosted checkout + webhook) |
+| Voice | ElevenLabs TTS |
+| AI | OpenAI GPT-4o-mini |
 
-### 3. Додати API ключі
-Відкрийте файл `.env` і замініть:
-```
-OPENAI_API_KEY=sk-ваш_ключ_тут
-ELEVENLABS_API_KEY=ваш_ключ_тут
-ELEVENLABS_VOICE_ID=ваш_voice_id_тут
-```
-
-**Де взяти ключі:**
-- OpenAI: https://platform.openai.com/api-keys
-- ElevenLabs: https://elevenlabs.io → Profile → API Key
-- Voice ID: ElevenLabs → Voice Library → оберіть голос → скопіюйте ID
-
-### 4. Запустити
-```bash
-# На підключеному Android/iOS пристрої:
-flutter run
-
-# Або на емуляторі:
-flutter run -d emulator-5554
-```
-
-## Структура проєкту
+## Architecture
 
 ```
 lib/
-├── main.dart                    # Точка входу
-├── models/
-│   └── ball_state.dart          # Стани сфери та моделі
-├── providers/
-│   └── ball_provider.dart       # Riverpod state management
-├── screens/
-│   └── balabony_screen.dart     # Головний екран
-├── services/
-│   ├── whisper_service.dart     # OpenAI Whisper STT
-│   ├── elevenlabs_service.dart  # ElevenLabs TTS
-│   └── gpt_service.dart         # GPT-4o-mini логіка
-└── widgets/
-    └── balabony_sphere.dart     # CustomPainter сфера
+  main.dart                  # Routes, app entry
+  screens/                   # balabony_screen, stories_screen
+  widgets/                   # paywall_dialog
+  services/                  # subscription_service, stories_service, device_id
+                             # elevenlabs_service, gpt_service, whisper_service
+  providers/                 # subscription_provider (Riverpod)
+  games/                     # Mini-games hub
+  models/ data/              # Story model + static metadata
+
+api/
+  chat.js                    # POST → OpenAI proxy (subscription-gated)
+  tts.js                     # POST → ElevenLabs proxy (subscription-gated)
+  user.js                    # POST → upsert device in Supabase
+  subscribe.js               # POST → create LiqPay payment (data + signature)
+  restore-purchase.js        # POST → check existing active subscription
+  get-story.js               # GET  → story text (premium stories gated)
+  subscription/check.js      # POST → { is_premium, expires_at }
+  subscription.js            # GET  → { active, plan, expires_at }
+  webhook/liqpay.js          # POST → LiqPay payment webhook (SHA1 verified)
+  _lib/
+    supabase.js              # Supabase client (service-role, no session)
+    checkSubscription.js     # isSubscribed(deviceId) helper
+
+supabase/migrations/
+  001_create_tables.sql      # app_users + app_subscriptions tables
+
+scripts/
+  pre-commit                 # Secret-scanning git hook
+  install-hooks.sh           # Install hooks after clone
+  test-webhook.js            # LiqPay webhook test runner
 ```
 
-## Стани сфери
+## Local Development
 
-| Стан | Колір | Анімація |
-|------|-------|----------|
-| IDLE | #1a237e (темно-синій) | Пульсація 0.8 сек |
-| LISTENING | #ef9f27 (золото) | Реакція на мікрофон |
-| THINKING | #7b1fa2 (фіолет) | Обертання + "Думаю..." |
-| SPEAKING | #ef9f27 (золото) | Активне світіння |
+Flutter web targets the Vercel API — no local server needed.
 
-## API Параметри
+```bash
+# Install Flutter dependencies
+flutter pub get
 
-### Whisper STT
-- model: `whisper-1`
-- language: `uk`
-- temperature: `0`
+# Run in Chrome
+flutter run -d chrome
 
-### ElevenLabs TTS
-- model: `eleven_turbo_v2_5`
-- speed: `0.9` (10% повільніше для літніх)
-- stability: `0.75`
-
-### GPT-4o-mini
-- max_tokens: `150` (короткі відповіді)
-- context: останні 10 хвилин діалогу
-
-## Логіка тиші
-Якщо користувач мовчить **8 секунд** — Балабон каже:
-> "Я тут. Нікуди не поспішаю. Скажіть коли будете готові."
-
-## Haptic Feedback
-`HapticFeedback.mediumImpact()` при кожному успішному розпізнаванні.
-
-## iOS Налаштування
-Додайте до `ios/Runner/Info.plist`:
-```xml
-<key>NSMicrophoneUsageDescription</key>
-<string>Балабону потрібен мікрофон щоб чути Вас</string>
-<key>NSSpeechRecognitionUsageDescription</key>
-<string>Для розпізнавання Вашого голосу</string>
+# Build for web (output → build/web/)
+flutter build web
 ```
 
-## Контакт
-nazar@balabony.net | balabony.com
+Vercel deploys automatically on push to `main` using `build/web/` as the output directory (`vercel.json`).
+
+## Vercel Serverless Functions
+
+Node.js ES modules (`"type": "module"` in `package.json`):
+
+```bash
+npm install
+```
+
+### Test the LiqPay webhook
+
+```bash
+cp .env.example .env   # fill in your keys
+
+node scripts/test-webhook.js https://app.balabony.com   # production
+node scripts/test-webhook.js http://localhost:3000       # local (needs ngrok)
+```
+
+## Database Setup
+
+Run once in **Supabase → SQL Editor**:
+
+```sql
+-- paste supabase/migrations/001_create_tables.sql
+NOTIFY pgrst, 'reload schema';
+```
+
+This creates `app_users` and `app_subscriptions` tables with RLS (service-role only).
+
+## Environment Variables
+
+Set in **Vercel → Project → Settings → Environment Variables**. Copy `.env.example` to `.env` for local webhook testing only.
+
+| Variable | Description |
+|---|---|
+| `OPENAI_API_KEY` | OpenAI API key — used by `/api/chat` |
+| `ELEVENLABS_API_KEY` | ElevenLabs API key — used by `/api/tts` |
+| `ELEVENLABS_VOICE_ID` | ElevenLabs voice ID |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | Supabase service-role key (`sb_secret_...`) |
+| `LIQPAY_PUBLIC_KEY` | LiqPay public key |
+| `LIQPAY_PRIVATE_KEY` | LiqPay private key — server-side only |
+| `APP_URL` | App URL, e.g. `https://app.balabony.com` |
+
+> **Both LiqPay keys must belong to the same account** — a mismatch causes `invalid_signature`.
+
+## Subscription Flow
+
+1. App launch → `DeviceId.get()` returns a persistent UUID (SharedPreferences)
+2. `/api/user` registers the device in `app_users`
+3. Premium action → `isPremium()` hits `/api/subscription/check`
+4. Not subscribed → `PaywallDialog` with monthly **99 ₴** / yearly **799 ₴**
+5. Subscribe → `/api/subscribe` returns LiqPay `data`+`signature` → user pays
+6. LiqPay POSTs to `/api/webhook/liqpay` → subscription written to `app_subscriptions`
+7. "Restore purchase" → `/api/restore-purchase` re-checks active subscription
+
+## Git Hooks
+
+Blocks commits containing API keys or secrets:
+
+```bash
+bash scripts/install-hooks.sh
+```
+
+Emergency bypass: `SKIP_SECRET_CHECK=1 git commit`
