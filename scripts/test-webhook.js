@@ -20,11 +20,11 @@ try {
 } catch { /* no .env — rely on environment */ }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const PRIVATE_KEY = process.env.LIQPAY_PRIVATE_KEY;
-const PUBLIC_KEY  = process.env.LIQPAY_PUBLIC_KEY;
-const BASE_URL    = process.argv[2] ?? 'http://localhost:3000';
-const WEBHOOK_URL = `${BASE_URL}/api/webhook/liqpay`;
-const TEST_USER   = '00000000-0000-4000-8000-000000000001';
+const PRIVATE_KEY      = process.env.LIQPAY_PRIVATE_KEY;
+const PUBLIC_KEY       = process.env.LIQPAY_PUBLIC_KEY;
+const BASE_URL         = process.argv[2] ?? 'http://localhost:3000';
+const WEBHOOK_URL      = `${BASE_URL}/api/webhook/liqpay`;
+const TEST_DEVICE_ID   = 'test-device-webhook-script';
 
 if (!PRIVATE_KEY) {
   console.error('\n✗ LIQPAY_PRIVATE_KEY not set — add it to .env\n');
@@ -74,6 +74,24 @@ console.log(`  ${process.env.APP_URL ?? '<your Vercel URL>'}/api/webhook/liqpay`
 console.log('\n  Dashboard → My Business → Edit → "Server URL" field');
 console.log('  (for local testing expose port 3000 with: npx ngrok http 3000)\n');
 console.log('══════════════════════════════════════════════════════\n');
+
+// ─── Register test device to get a real user_id ──────────────────────────────
+let TEST_USER;
+try {
+  const r = await fetch(`${BASE_URL}/api/user`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ device_id: TEST_DEVICE_ID }),
+  });
+  const j = await r.json();
+  TEST_USER = j.user_id;
+  if (!TEST_USER) throw new Error(JSON.stringify(j));
+  console.log(`Test user:   ${TEST_USER}\n`);
+} catch (e) {
+  console.error(`✗ Could not register test device: ${e.message}`);
+  console.error('  Make sure SUPABASE_URL and SUPABASE_SERVICE_KEY are set and the migration has been run.\n');
+  process.exit(1);
+}
 
 // ─── Test 1: Successful monthly payment ──────────────────────────────────────
 const orderId = `${TEST_USER}_${Date.now()}`;
