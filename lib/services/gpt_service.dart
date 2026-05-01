@@ -1,5 +1,5 @@
+import 'dart:html' as html;
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/ball_state.dart';
 
 const String _systemPrompt = '''
@@ -41,9 +41,6 @@ class GptService {
   final _dio = Dio();
   final List<ConversationMessage> _history = [];
 
-  String get _apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
-
-  // Add system prompt on init
   GptService() {
     _history.add(ConversationMessage(
       role: 'system',
@@ -67,7 +64,7 @@ class GptService {
 
     try {
       final response = await _dio.post(
-        'https://api.openai.com/v1/chat/completions',
+        '${html.window.location.origin}/api/chat',
         data: {
           'model': 'gpt-4o-mini',
           'max_tokens': 150,
@@ -75,10 +72,7 @@ class GptService {
           'messages': recentMessages.map((m) => m.toMap()).toList(),
         },
         options: Options(
-          headers: {
-            'Authorization': 'Bearer $_apiKey',
-            'Content-Type': 'application/json',
-          },
+          headers: {'Content-Type': 'application/json'},
         ),
       );
 

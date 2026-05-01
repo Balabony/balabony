@@ -25,9 +25,6 @@ dependencies:
   http: ^1.1.0
   http_parser: ^4.0.2
   
-  # Environment variables
-  flutter_dotenv: ^5.1.0
-  
   # Haptics
   vibration: ^1.8.4
   
@@ -49,5 +46,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - .env
+  assets: []

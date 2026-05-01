@@ -1,21 +1,17 @@
 import 'dart:async';
+import 'dart:html' as html;
 import 'dart:js' as js;
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ElevenLabsService {
   final _dio = Dio();
 
-  String get _apiKey => dotenv.env['ELEVENLABS_API_KEY'] ?? '';
-  String get _voiceId => dotenv.env['ELEVENLABS_VOICE_ID'] ?? '';
-
   Future<void> speak(String text, {Function? onComplete}) async {
     try {
       final response = await _dio.post(
-        'https://api.elevenlabs.io/v1/text-to-speech/$_voiceId',
+        '${html.window.location.origin}/api/tts',
         options: Options(
           headers: {
-            'xi-api-key': _apiKey,
             'Content-Type': 'application/json',
             'Accept': 'audio/mpeg',
           },
