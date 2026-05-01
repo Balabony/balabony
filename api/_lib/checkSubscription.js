@@ -12,7 +12,7 @@ export async function isSubscribed(deviceId) {
   if (!user) return false;
 
   const { data: sub } = await supabase
-    .from('subscriptions')
+    .from('app_subscriptions')
     .select('id')
     .eq('user_id', user.id)
     .eq('status', 'active')

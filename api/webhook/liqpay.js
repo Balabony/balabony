@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
   // Idempotency: skip already-processed order IDs
   const { data: existing } = await supabase
-    .from('subscriptions')
+    .from('app_subscriptions')
     .select('id')
     .eq('liqpay_order_id', payload.order_id)
     .maybeSingle();
@@ -55,13 +55,13 @@ export default async function handler(req, res) {
 
   // Expire any existing active subscription for this user
   await supabase
-    .from('subscriptions')
+    .from('app_subscriptions')
     .update({ status: 'expired' })
     .eq('user_id', userId)
     .eq('status', 'active');
 
   const { error } = await supabase
-    .from('subscriptions')
+    .from('app_subscriptions')
     .insert({
       user_id:           userId,
       status:            'active',

@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   const { data: sub } = await supabase
-    .from('subscriptions')
+    .from('app_subscriptions')
     .select('plan, expires_at')
     .eq('user_id', user.id)
     .eq('status', 'active')
