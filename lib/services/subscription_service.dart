@@ -16,14 +16,15 @@ class SubscriptionService {
     } catch (_) {}
   }
 
-  Future<bool> isSubscribed() async {
+  Future<bool> isPremium() async {
     final id = await DeviceId.get();
     try {
-      final response = await _dio.get(
-        '${html.window.location.origin}/api/subscription',
-        options: Options(headers: {'x-device-id': id}),
+      final response = await _dio.post(
+        '${html.window.location.origin}/api/subscription/check',
+        data: {'device_id': id},
+        options: Options(headers: {'Content-Type': 'application/json'}),
       );
-      return response.data['active'] == true;
+      return response.data['is_premium'] == true;
     } catch (_) {
       return false;
     }

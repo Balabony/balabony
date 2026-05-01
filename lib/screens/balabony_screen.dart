@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ball_state.dart';
 import '../providers/ball_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../widgets/balabony_sphere.dart';
+import '../widgets/paywall_dialog.dart';
 
 class BalabonyScreen extends ConsumerStatefulWidget {
   const BalabonyScreen({super.key});
@@ -17,7 +19,26 @@ class _BalabonyScreenState extends ConsumerState<BalabonyScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(ballStateProvider.notifier).initialize();
+      // Pre-fetch so the first tap is instant
+      ref.read(subscriptionProvider.future);
     });
+  }
+
+  Future<void> _onSphereTap() async {
+    final premium = await ref.read(subscriptionProvider.future);
+    if (!mounted) return;
+    if (!premium) {
+      final subscribed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const PaywallDialog(),
+      );
+      if (subscribed == true) {
+        ref.read(ballStateProvider.notifier).onTap();
+      }
+      return;
+    }
+    ref.read(ballStateProvider.notifier).onTap();
   }
 
   Color _getStateColor(BallState state) {
@@ -112,7 +133,7 @@ class _BalabonyScreenState extends ConsumerState<BalabonyScreen> {
                     child: BalabonySphere(
                       state: ballData.state,
                       amplitude: ballData.amplitude,
-                      onTap: () => ref.read(ballStateProvider.notifier).onTap(),
+                      onTap: _onSphereTap,
                     ),
                   ),
                 ),
