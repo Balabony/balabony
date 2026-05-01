@@ -12,30 +12,75 @@ class PaywallDialog extends ConsumerStatefulWidget {
 
 class _PaywallDialogState extends ConsumerState<PaywallDialog> {
   String _selectedPlan = 'monthly';
-  bool _loading = false;
+  bool _subscribing = false;
+  bool _restoring = false;
+  String? _restoreMessage;
+  bool? _restoreSuccess;
+
+  bool get _loading => _subscribing || _restoring;
 
   static const _gold = Color(0xFFEF9F27);
-  static const _bg = Color(0xFF080d1a);
-  static const _card = Color(0xFF0f1628);
+  static const _bg   = Color(0xFF080d1a);
 
+  // ─── Subscribe ─────────────────────────────────────────────────────────────
   Future<void> _subscribe() async {
-    setState(() => _loading = true);
+    setState(() => _subscribing = true);
     try {
       await SubscriptionService().launchPayment(plan: _selectedPlan);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _subscribing = false);
     }
   }
 
-  Future<void> _checkAlreadySubscribed() async {
-    setState(() => _loading = true);
-    await ref.read(subscriptionProvider.notifier).refresh();
-    setState(() => _loading = false);
-    if (!mounted) return;
-    final isPremium = ref.read(subscriptionProvider).valueOrNull ?? false;
-    if (isPremium) Navigator.of(context).pop(true);
+  // ─── Restore Purchase ──────────────────────────────────────────────────────
+  Future<void> _restorePurchase() async {
+    setState(() { _restoring = true; _restoreMessage = null; });
+    try {
+      final result = await SubscriptionService().restorePurchase();
+      if (!mounted) return;
+
+      if (result?['restored'] == true) {
+        await ref.read(subscriptionProvider.notifier).refresh();
+        if (!mounted) return;
+        final formatted = _formatDate(result!['expires_at'] as String? ?? '');
+        setState(() {
+          _restoreMessage = '✓ Підписку відновлено! Діє до $formatted';
+          _restoreSuccess = true;
+        });
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) Navigator.of(context).pop(true);
+      } else {
+        setState(() {
+          _restoreMessage = 'Активну підписку не знайдено';
+          _restoreSuccess = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _restoreMessage = 'Помилка з\'єднання. Спробуйте ще раз';
+          _restoreSuccess = false;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _restoring = false);
+    }
   }
 
+  String _formatDate(String iso) {
+    const months = [
+      'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+      'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня',
+    ];
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year} р.';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  // ─── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -75,10 +120,7 @@ class _PaywallDialogState extends ConsumerState<PaywallDialog> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            _gold.withOpacity(0.15),
-            _gold.withOpacity(0.03),
-          ],
+          colors: [_gold.withOpacity(0.15), _gold.withOpacity(0.03)],
         ),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -133,38 +175,28 @@ class _PaywallDialogState extends ConsumerState<PaywallDialog> {
     const features = [
       ('✓', 'Необмежені розмови з Балабоном'),
       ('✓', 'Природний живий голос'),
+      ('✓', 'Аудіоісторії та казки'),
       ('✓', 'Поруч у будь-який момент'),
     ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
       child: Column(
-        children: features
-            .map(
-              (f) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    Text(
-                      f.$1,
-                      style: const TextStyle(
-                        color: _gold,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      f.$2,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.85),
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
+        children: features.map((f) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(
+            children: [
+              Text(f.$1,
+                style: const TextStyle(
+                  color: _gold, fontSize: 17, fontWeight: FontWeight.bold,
+                )),
+              const SizedBox(width: 12),
+              Text(f.$2,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.85), fontSize: 15,
+                )),
+            ],
+          ),
+        )).toList(),
       ),
     );
   }
@@ -199,6 +231,7 @@ class _PaywallDialogState extends ConsumerState<PaywallDialog> {
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         children: [
+          // ── Subscribe ──────────────────────────────────────────────────────
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -213,36 +246,74 @@ class _PaywallDialogState extends ConsumerState<PaywallDialog> {
                 ),
                 elevation: 0,
               ),
-              child: _loading
+              child: _subscribing
                   ? const SizedBox(
-                      width: 22,
-                      height: 22,
+                      width: 22, height: 22,
                       child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Color(0xFF080d1a),
+                        strokeWidth: 2.5, color: Color(0xFF080d1a),
                       ),
                     )
                   : const Text(
                       'Підписатися',
                       style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.3,
+                        fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 0.3,
                       ),
                     ),
             ),
           ),
+
           const SizedBox(height: 10),
-          TextButton(
-            onPressed: _loading ? null : _checkAlreadySubscribed,
-            child: Text(
-              'Вже підписався',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.45),
-                fontSize: 14,
+
+          // ── Restore Purchase ───────────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton(
+              onPressed: _loading ? null : _restorePurchase,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white.withOpacity(0.7),
+                disabledForegroundColor: Colors.white.withOpacity(0.2),
+                side: BorderSide(
+                  color: _loading
+                      ? Colors.white.withOpacity(0.08)
+                      : Colors.white.withOpacity(0.2),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
+              child: _restoring
+                  ? SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                    )
+                  : const Text(
+                      'Відновити підписку',
+                      style: TextStyle(fontSize: 15),
+                    ),
             ),
           ),
+
+          // ── Restore feedback ───────────────────────────────────────────────
+          if (_restoreMessage != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _restoreMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _restoreSuccess == true
+                    ? const Color(0xFF66BB6A)
+                    : Colors.redAccent.withOpacity(0.85),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ],
+
+          // ── Dismiss ────────────────────────────────────────────────────────
           TextButton(
             onPressed: _loading ? null : () => Navigator.of(context).pop(false),
             child: Text(
@@ -258,6 +329,8 @@ class _PaywallDialogState extends ConsumerState<PaywallDialog> {
     );
   }
 }
+
+// ─── Plan Card ───────────────────────────────────────────────────────────────
 
 class _PlanCard extends StatelessWidget {
   final String label;

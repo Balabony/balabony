@@ -16,6 +16,20 @@ class SubscriptionService {
     } catch (_) {}
   }
 
+  Future<Map<String, dynamic>?> restorePurchase() async {
+    final id = await DeviceId.get();
+    try {
+      final response = await _dio.post(
+        '${html.window.location.origin}/api/restore-purchase',
+        data: {'device_id': id},
+        options: Options(headers: {'Content-Type': 'application/json'}),
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<bool> isPremium() async {
     final id = await DeviceId.get();
     try {
