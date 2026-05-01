@@ -4,7 +4,7 @@ export async function isSubscribed(deviceId) {
   if (!deviceId) return false;
 
   const { data: user } = await supabase
-    .from('users')
+    .from('app_users')
     .select('id')
     .eq('device_id', deviceId)
     .maybeSingle();

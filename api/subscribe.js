@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   const { data: user, error } = await supabase
-    .from('users')
+    .from('app_users')
     .upsert({ device_id }, { onConflict: 'device_id' })
     .select('id')
     .single();

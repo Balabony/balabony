@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   const { data: user } = await supabase
-    .from('users')
+    .from('app_users')
     .select('id')
     .eq('device_id', deviceId)
     .maybeSingle();
